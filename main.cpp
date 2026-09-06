@@ -16,6 +16,8 @@ int main() {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
+    // credential test
+
     SDL_CreateWindowAndRenderer(
         V_WIDTH, V_HEIGHT, 0,
         &window, &renderer);
@@ -30,7 +32,7 @@ int main() {
             }
         }
     }
-
+  
 
     std::cout << "Window initialized with dimensions: " << V_WIDTH << "x" << V_HEIGHT << std::endl;
 
