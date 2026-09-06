@@ -147,7 +147,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=Project
+CMAKE_PROJECT_NAME:STATIC=Rasterizer
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -222,6 +222,27 @@ Project_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 Project_SOURCE_DIR:STATIC=/home/sean/technical_artist_projects/SoftwareRasterizer
+
+//Value Computed by CMake
+Rasterizer_BINARY_DIR:STATIC=/home/sean/technical_artist_projects/SoftwareRasterizer/build
+
+//Value Computed by CMake
+Rasterizer_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+Rasterizer_SOURCE_DIR:STATIC=/home/sean/technical_artist_projects/SoftwareRasterizer
+
+//The directory containing a CMake configuration file for SDL2.
+SDL2_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/SDL2
+
+//Value Computed by CMake
+SoftwareRasterizer_BINARY_DIR:STATIC=/home/sean/technical_artist_projects/SoftwareRasterizer/build
+
+//Value Computed by CMake
+SoftwareRasterizer_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+SoftwareRasterizer_SOURCE_DIR:STATIC=/home/sean/technical_artist_projects/SoftwareRasterizer
 
 
 ########################
