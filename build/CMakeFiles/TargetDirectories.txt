@@ -1,0 +1,2 @@
+/home/sean/technical_artist_projects/SoftwareRasterizer/build/CMakeFiles/edit_cache.dir
+/home/sean/technical_artist_projects/SoftwareRasterizer/build/CMakeFiles/rebuild_cache.dir
