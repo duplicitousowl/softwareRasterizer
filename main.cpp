@@ -25,7 +25,7 @@ int main() {
     
     // create texture pointer
     SDL_Texture* texture = SDL_CreateTexture(renderer,
-                                    // pixels vector is storing ARGB32b values
+                                    // pixels vector is storing ABGR32b values
                                     SDL_PIXELFORMAT_ABGR8888,
                                     // this is for updating pixel data with custom data, our vector. enum of 1. alternatives are SDL_TEXTUREACCESS_STATIC (enum of 0) for static images, and SDL_TEXTUREACCESS_TARGET (enum of 2) for using SDL tools for pixel data
                                     SDL_TEXTUREACCESS_STREAMING,
@@ -48,7 +48,7 @@ int main() {
                 // if user x's out, ends loop
                 isRunning = false; 
             }
-            
+        }
             // updates SDL texture with our vector data. 
             SDL_UpdateTexture(texture,
                             // null since we aren't using rect. we are updating entire texture/renderer so dont need to specify a region
@@ -69,12 +69,7 @@ int main() {
             
             // display our updated renderer
             SDL_RenderPresent(renderer);
-        }
     }
-
-    
-  
-
     
     // tearing down renderer and window instances to prevent memory leaks
     SDL_DestroyRenderer(renderer);
