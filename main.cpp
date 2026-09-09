@@ -2,11 +2,12 @@
 #include <vector>
 #include <cstdint>
 #include <SDL.h>
+#include <cmath>
 // to run this, in root directory: cmake --build build
 //                                 ./build/rasterizer
 
 // setting up the window size
-    const int W_WIDTH = 600;
+    const int W_WIDTH = 800;
     const int W_HEIGHT = 800;
 
 // make helper struct for 2d screen coordinates
@@ -15,8 +16,47 @@ struct Point {
     int y;
 };
 
+// Edge struct, will hold index of vertices in vector<vertex> that have an edge connecting them 
+struct Edge {
+    int a, b;
+};
+
+struct Vertex {
+    float x, y, z;
+};
+
+// shape struct to hold a shape's vertices and edge relationship data
+struct Shape {
+    std::vector<Edge> edges;
+    std::vector<Vertex> vertices;
+};
+
+// Define a rotate function that takes in a vertex, applies the rotation formula, and returns a new vertex to preserve original
+Vertex rotate_vertex(Vertex v, float theta) {
+    float xp = (v.x * std::cos(theta)) - (v.y * std::sin(theta));
+    float yp = (v.x * std::sin(theta)) + (v.y * std::cos(theta));
+
+    Vertex rotated_vertex = {xp, yp, v.z};
+    return rotated_vertex;
+}
+
+// Define a rotate shape function that loops over a shapes vertices, runs them through the rotate vertex function and returns a new rotated shape.
+Shape rotate_shape (Shape shape, float theta) {
+    Shape shape_to_return;
+    shape_to_return.edges = shape.edges;
+
+    for (int i = 0; i < shape.vertices.size(); ++i) {
+        Vertex rotated_vertex;
+        rotated_vertex = rotate_vertex(shape.vertices[i], theta);
+        shape_to_return.vertices.push_back(rotated_vertex);
+    }
+
+    return shape_to_return;
+}
+
+
 //coordinate translator function to allow cartesian coordinate use ((0,0) center of screen)
-Point c_to_screen(int x, int y) {
+Point c_to_screen(int x, int y) { 
     return {
         x + (W_WIDTH / 2),
         (W_HEIGHT / 2) - y
@@ -40,11 +80,11 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color, std::vector<uint3
     int sx = (x0 < x1) ? 1 : -1;
     int sy = (y0 < y1) ? 1 : -1;
 
-    // instantiate the error. starting with dx - dy makes y our floor and x our ceiling
+    // instantiate the error. starting with dx - dy makes y the floor and x the ceiling
     int err = dx - dy;
 
     while (true) {
-        // place a pixel at the target pixel at the start of every loop
+        // place a pixel at the current pixel at the start of every loop
         put_pixel(x0, y0, color, pixels);
 
         // check to see if the line has reached it's destination, if it has breaks
@@ -67,9 +107,57 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color, std::vector<uint3
     }
 }
 
+
+void draw_shape(Shape shape, uint32_t color, std::vector<uint32_t>& pixels) {
+    for (int i = 0; i < shape.edges.size(); ++i) {
+        // unpacks the vertices that are specified in the edge relationship vector
+        Vertex v0 = shape.vertices[shape.edges[i].a];
+        Vertex v1 = shape.vertices[shape.edges[i].b];
+
+        // points v0.x and v0.y can be floats from sin/cos rotations. round them, cast to int type, and convert from cartesian coordinates to screen for draw line function
+        Point s0 = c_to_screen(static_cast<int>(std::round(v0.x)), static_cast<int>(std::round(v0.y)));
+        Point s1 = c_to_screen(static_cast<int>(std::round(v1.x)), static_cast<int>(std::round(v1.y)));
+
+        draw_line(s0.x, s0.y, s1.x, s1.y, color, pixels);
+    }
+}
+
+// for testing draw_shape
+Shape make_test_box() {
+    Shape s;
+    s.vertices = {
+        {-100, 100},
+        {-100, -100},
+        {100, -100},
+        {100, 100}
+    };
+    s.edges = {
+        {0,1}, {1,2}, {2,3}, {3,0}
+    };
+    return s;
+}
+
+void draw_box(Point p1, uint32_t color, std::vector<uint32_t>& pixels) {
+    Point cart_tl = {-p1.x, p1.y};
+    Point cart_tr = {p1.x, p1.y};
+    Point cart_br = {p1.x, -p1.y};
+    Point cart_bl = {-p1.x, -p1.y};
+
+    Point sp1_tl = c_to_screen(cart_tl.x, cart_tl.y);
+    Point sp1_tr = c_to_screen(cart_tr.x, cart_tr.y);
+    Point sp1_br = c_to_screen(cart_br.x, cart_br.y);
+    Point sp1_bl = c_to_screen(cart_bl.x, cart_bl.y);
+
+    draw_line(sp1_tl.x, sp1_tl.y, sp1_tr.x, sp1_tr.y, color, pixels);
+    draw_line(sp1_tr.x, sp1_tr.y, sp1_br.x, sp1_br.y, color, pixels);
+    draw_line(sp1_br.x, sp1_br.y, sp1_bl.x, sp1_bl.y, color, pixels);
+    draw_line(sp1_bl.x, sp1_bl.y, sp1_tl.x, sp1_tl.y, color, pixels);
+}
+
+
 int main() {    
     // Initialize pixel vector (480,000 pixels)
-    std::vector<uint32_t> pixels(W_WIDTH * W_HEIGHT, 0); 
+    std::vector<uint32_t> pixels(W_WIDTH * W_HEIGHT, 0xFFFFFFFF); 
 
     // initialize SDLwindow, SDLRenderer and a pointer to each set to null
     SDL_Window* window = nullptr;
@@ -83,17 +171,18 @@ int main() {
     
     // create texture pointer
     SDL_Texture* texture = SDL_CreateTexture(renderer,
-                                    // pixels vector is storing ABGR32b values
-                                    SDL_PIXELFORMAT_ABGR8888,
-                                    // this is for updating pixel data with custom data i.e. the 'pixels' vector. enum of 1. alternatives are SDL_TEXTUREACCESS_STATIC (enum of 0) for static images, and SDL_TEXTUREACCESS_TARGET (enum of 2) for using SDL tools for pixel data
-                                    SDL_TEXTUREACCESS_STREAMING,
-                                    W_WIDTH,
-                                    W_HEIGHT);
+    // pixels vector is storing ABGR32b values
+                                            SDL_PIXELFORMAT_ABGR8888,
+    // this is for updating pixel data with custom data i.e. the 'pixels' vector. enum of 1. alternatives are SDL_TEXTUREACCESS_STATIC (enum of 0) for static images, and SDL_TEXTUREACCESS_TARGET (enum of 2) for using SDL tools for pixel data
+                                            SDL_TEXTUREACCESS_STREAMING,
+                                            W_WIDTH,
+                                            W_HEIGHT);
     
     // initialize true bool for while loop
     bool isRunning = true;
     // initialize SDLEvent to event
     SDL_Event event; 
+    Shape test_box = make_test_box();
 
     // loop to keep window open/running
     while (isRunning) {
@@ -107,33 +196,16 @@ int main() {
                 isRunning = false; 
             }
         }   
+            // reset vector at beginning of every loop so there's no lingering line data
+            std::fill(pixels.begin(), pixels.end(), 0xFFFFFFFF);
 
-            Point center = c_to_screen(0,0);
+            uint32_t black = 0xFF000000;
+            float theta = 0.5f;
 
-            uint32_t red = 0xFF0000FF;
-            uint32_t green = 0xFF00FF00;
+            Shape rotated_box = rotate_shape(test_box, theta);
+            
 
-            Point p1 = c_to_screen(-250,-250);
-            Point p2 = c_to_screen(250, -250);
-            Point p3 = c_to_screen(250, 250);
-            Point p4 = c_to_screen(-250, 250);
-            Point sb1 = c_to_screen(-100,-100);
-            Point sb2 = c_to_screen(100, -100);
-            Point sb3 = c_to_screen(100, 100);
-            Point sb4 = c_to_screen(-100, 100);
-
-            draw_line(p1.x, p1.y, p2.x, p2.y, red, pixels);
-            draw_line(p2.x, p2.y, p3.x, p3.y, red, pixels);
-            draw_line(p3.x, p3.y, p4.x, p4.y, red, pixels);
-            draw_line(p4.x, p4.y, p1.x, p1.y, red, pixels);
-            draw_line(sb1.x, sb1.y, sb2.x, sb2.y, green, pixels);
-            draw_line(sb2.x, sb2.y, sb3.x, sb3.y, green, pixels);
-            draw_line(sb3.x, sb3.y, sb4.x, sb4.y, green, pixels);
-            draw_line(sb4.x, sb4.y, sb1.x, sb1.y, green, pixels);
-            draw_line(p1.x, p1.y, sb1.x, sb1.y, red, pixels);
-            draw_line(p2.x, p2.y, sb2.x, sb2.y, red, pixels);
-            draw_line(p3.x, p3.y, sb3.x, sb3.y, red, pixels);
-            draw_line(p4.x, p4.y, sb4.x, sb4.y, red, pixels);
+            draw_shape(rotated_box, black, pixels);
 
             // clear the renderer in anticipation of filling it with the updated texture
             SDL_RenderClear(renderer);
