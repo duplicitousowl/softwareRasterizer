@@ -5,6 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(SDL2 REQUIRED)
 
-add_executable(rasterizer main.cpp)
+add_executable(rasterizer main.cpp render.cpp transform.cpp)
 
 target_link_libraries(rasterizer PRIVATE SDL2::SDL2)
