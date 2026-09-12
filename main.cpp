@@ -6,55 +6,84 @@
 #include "transform.h"
 #include "render.h"
 #include <limits>
+#include <fstream>
+#include <sstream>
 // to run this, in root directory: cmake --build build
 //                                 ./build/rasterizer
 
-float theta = -0.1f;
 bool dragging = false;
 float camera_yaw = 0.0f;
 float camera_pitch = 0.0f;
 
 
-// for testing draw_shape
-Shape make_test_box() {
+Shape load_obj(std::string filepath) {
     Shape s;
-    s.vertices = {
-        {-100, 100, -100}, // back top left 0
-        {-100, -100, -100}, // back bottom left 1
-        {100, -100, -100}, // back bottom right 2
-        {100, 100, -100}, // back top right 3
-        {-100, 100, 100}, // front top left 4
-        {-100, -100, 100}, // front bottom left 5
-        {100, -100, 100}, // front bottom right 6
-        {100, 100, 100} // front top right 7
-    };
-    s.edges = {
-        {0,1}, {1,2}, {2,3}, {3,0}, {4,5}, {5,6}, {6,7},{7,4},{0,4},{1,5},{2,6},{3,7}
-    };
-    s.triangles = {
-    {0,3,2}, {0,2,1}, // back
-    {4,5,6}, {4,6,7}, // front
-    {2,3,7}, {2,7,6}, // right
-    {0,1,5}, {0,5,4}, // left
-    {0,4,7}, {0,7,3}, // top
-    {1,2,6}, {1,6,5}  // bottom
-};
+    std::ifstream file(filepath);
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.substr(0, 2) == "v ") {
+            std::stringstream ss(line);
+            std::string token;
+            
+            std::vector<float> float_values;
+            while (ss >> token) {
+                if (token == "v") continue;
+                
+                float vector_pos = std::stof(token);
+                float_values.push_back(vector_pos);
+                
+            }
+            s.vertices.push_back({float_values[0], float_values[1], float_values[2]});
+            
+        }
+        if (line.substr(0,2) == "f "){
+            std::stringstream ss(line);
+            std:: string token;
+
+            std::vector<int> indexes;
+
+            while (ss >> token) {
+                if (token == "f") continue;
+                size_t slash_pos = token.find('/');
+                std::string index_str = token.substr(0, slash_pos);
+
+                int index = (std::stoi(index_str)) -1;
+                indexes.push_back(index);
+            }
+            s.triangles.push_back({indexes[0], indexes[1], indexes[2]});            
+        }
+    }
+
+    float min_x = s.vertices[0].x;
+    float min_y= s.vertices[0].y;
+    float min_z= s.vertices[0].z;
+    float max_x = s.vertices[0].x;
+    float max_y = s.vertices[0].y;
+    float max_z = s.vertices[0].z;
+
+    for (Vertex vertex : s.vertices) {
+        min_x = (vertex.x < min_x) ? vertex.x : min_x;
+        max_x = (vertex.x > max_x) ? vertex.x : max_x;
+        min_y = (vertex.y < min_y) ? vertex.y : min_y;
+        max_y = (vertex.y > max_y) ? vertex.y : max_y;
+        min_z = (vertex.z < min_z) ? vertex.z : min_z;
+        max_z = (vertex.z > max_z) ? vertex.z : max_z;
+    }
+    float x_distance = max_x - min_x;
+    float y_distance = max_y - min_y;
+    float z_distance = max_z - min_z;
+    float max_bounding_distance = std::max(std::max(x_distance, y_distance), z_distance);
+    float scale_ratio = (W_HEIGHT / max_bounding_distance) * 0.35;
+
+    for (Vertex& vertex : s.vertices) {
+        vertex.x *= scale_ratio;
+        vertex.y *= scale_ratio;
+        vertex.z *= scale_ratio;
+    }
+
+
     return s;
-}
-
-Shape make_test_triangle() {
-    Shape t;
-    t.vertices = {
-        {0,0},
-        {100, 0},
-        {0,100}
-    };
-    t.edges = {
-        {0,1}, {1,2}, {2,0}
-    };
-    t.triangles = {{0,1,2}};
-
-    return t;
 }
 
 int main() {    
@@ -63,7 +92,7 @@ int main() {
 
     std::vector<float> z_buffer(W_WIDTH* W_HEIGHT, std::numeric_limits<float>::max());
 
-    Vertex light_direction = normalize({0, 0, -1});
+    Vertex light_direction = normalize({0, 1, -1});
 
     // initialize SDLwindow, SDLRenderer and a pointer to each set to null
     SDL_Window* window = nullptr;
@@ -90,9 +119,6 @@ int main() {
     bool isRunning = true;
     // initialize SDLEvent to event
     SDL_Event event; 
-
-    Shape test_box = make_test_box();
-    Shape test_triangle = make_test_triangle();
 
     // loop to keep window open/running
     while (isRunning) {
@@ -128,10 +154,7 @@ int main() {
             std::fill(z_buffer.begin(), z_buffer.end(), std::numeric_limits<float>::max());
 
             
-
-            theta -= 0.0015f;
-            
-            Shape transformed_box = project_shape(rotate_shape(test_box, camera_pitch, camera_yaw, 0.0f), 750);
+            Shape transformed_box = project_shape(rotate_shape(load_obj("teapot.obj"), camera_pitch, camera_yaw, 0.0f), 750);
 
             draw_shape(transformed_box, black, pixels);
             fill_shape(transformed_box, gray, pixels, z_buffer, light_direction);
