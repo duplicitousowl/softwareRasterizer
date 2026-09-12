@@ -93,6 +93,36 @@ bool depth_test (int x, int y, float depth, std::vector<float>& z_buffer) {
     return false;
 }
 
+Vertex normalize (Vertex v0) {
+    float vector_distance = std::sqrt((v0.x * v0.x) + (v0.y * v0.y) + (v0.z * v0.z));
+
+    Vertex normalized_vector = {v0.x / vector_distance, v0.y / vector_distance, v0.z / vector_distance};
+
+    return normalized_vector;
+}
+
+
+
+Vertex cross_product (Vertex v0, Vertex v1) {
+Vertex result;
+    result.x = (v0.y * v1.z) - (v0.z * v1.y);
+    result.y = (v0.z * v1.x) - (v0.x * v1.z);
+    result.z = (v0.x * v1.y) - (v0.y * v1.x); 
+
+    return result;
+}
+
+float dot_product (Vertex v0, Vertex v1) {
+    return ((v0.x * v1.x) + (v0.y * v1.y) + (v0.z * v1.z));
+}
+
+Vertex triangle_normal (Vertex v0, Vertex v1, Vertex v2) {
+    Vertex edge1 = {v1.x - v0.x, v1.y - v0.y, v1.z - v0.z};
+    Vertex edge2 = {v2.x - v1.x, v2.y - v1.y, v2.z - v1.z};
+
+    return cross_product(edge1, edge2);
+}
+
 void draw_triangle(Point p1, Point p2, Point p3, float z1, float z2, float z3, uint32_t color, std::vector<uint32_t>& pixels, std::vector<float>& z_buffer) {
     int min_x = std::min(p1.x, std::min(p2.x, p3.x));
     int max_x = std::max(p1.x, std::max(p2.x, p3.x));
@@ -107,7 +137,7 @@ void draw_triangle(Point p1, Point p2, Point p3, float z1, float z2, float z3, u
             int r3 = edge_function(p3, p1, point_to_eval);
 
             
-            if ((r1 > 0 && r2 > 0 && r3 > 0) || (r1 < 0 && r2 < 0 && r3 < 0)) {
+            if ((r1 >= 0 && r2 >= 0 && r3 >= 0) || (r1 <= 0 && r2 <= 0 && r3 <= 0)) {
             float total = r1 + r2 + r3;
             float w1 = r2 / total;
             float w2 = r3 / total;
@@ -122,8 +152,24 @@ void draw_triangle(Point p1, Point p2, Point p3, float z1, float z2, float z3, u
     }
 }
 
-void fill_shape(Shape shape, uint32_t color, std::vector<uint32_t>& pixels, std::vector<float>& z_buffer) {
+void fill_shape(Shape shape, uint32_t color, std::vector<uint32_t>& pixels, std::vector<float>& z_buffer, Vertex light_direction) {
     for (Triangle t : shape.triangles) {
+
+        Vertex normal = normalize(triangle_normal(shape.vertices[t.a], shape.vertices[t.b], shape.vertices[t.c]));
+        float lighting_weight = dot_product(normal, light_direction) < 0 ? 0 : dot_product(normal, light_direction);
+        
+        uint8_t a = (color >> 24) & 0xFF;
+        uint8_t b = (color >> 16) & 0xFF;
+        uint8_t g = (color >> 8 ) & 0xFF;
+        uint8_t r = color & 0xFF;
+        
+        b *= lighting_weight;
+        g *= lighting_weight;
+        r *= lighting_weight;
+
+        uint32_t new_color = (a << 24) | (b << 16) | (g << 8) | r;
+        
+
         Point p1 = c_to_screen(static_cast<int>(std::round(shape.vertices[t.a].x)), static_cast<int>(std::round(shape.vertices[t.a].y)));
         Point p2 = c_to_screen(static_cast<int>(std::round(shape.vertices[t.b].x)), static_cast<int>(std::round(shape.vertices[t.b].y)));
         Point p3 = c_to_screen(static_cast<int>(std::round(shape.vertices[t.c].x)), static_cast<int>(std::round(shape.vertices[t.c].y)));
@@ -132,6 +178,6 @@ void fill_shape(Shape shape, uint32_t color, std::vector<uint32_t>& pixels, std:
         float z2 = shape.vertices[t.b].z;
         float z3 = shape.vertices[t.c].z;
 
-        draw_triangle(p1, p2, p3, z1, z2, z3, color, pixels, z_buffer);
+        draw_triangle(p1, p2, p3, z1, z2, z3, new_color, pixels, z_buffer);
     }
 }

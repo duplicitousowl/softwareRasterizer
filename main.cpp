@@ -9,6 +9,12 @@
 // to run this, in root directory: cmake --build build
 //                                 ./build/rasterizer
 
+float theta = -0.1f;
+bool dragging = false;
+float camera_yaw = 0.0f;
+float camera_pitch = 0.0f;
+
+
 // for testing draw_shape
 Shape make_test_box() {
     Shape s;
@@ -26,8 +32,13 @@ Shape make_test_box() {
         {0,1}, {1,2}, {2,3}, {3,0}, {4,5}, {5,6}, {6,7},{7,4},{0,4},{1,5},{2,6},{3,7}
     };
     s.triangles = {
-        {0,1,2}, {0,2,3}, {0,3,4}, {3,4,7}, {2,3,6}, {3,6,7}, {0,4,5}, {0,1,5}, {1,2,5}, {2,5,6}, {4,5,6}, {4,6,7}  // back face, top face, right face, left face, bottom face, front face
-    };
+    {0,3,2}, {0,2,1}, // back
+    {4,5,6}, {4,6,7}, // front
+    {2,3,7}, {2,7,6}, // right
+    {0,1,5}, {0,5,4}, // left
+    {0,4,7}, {0,7,3}, // top
+    {1,2,6}, {1,6,5}  // bottom
+};
     return s;
 }
 
@@ -46,15 +57,13 @@ Shape make_test_triangle() {
     return t;
 }
 
-
-float theta = -0.1f;
-
-
 int main() {    
     // Initialize pixel vector (640,000 pixels)
     std::vector<uint32_t> pixels(W_WIDTH * W_HEIGHT, 0xFFFFFFFF); 
 
     std::vector<float> z_buffer(W_WIDTH* W_HEIGHT, std::numeric_limits<float>::max());
+
+    Vertex light_direction = normalize({0, 0, -1});
 
     // initialize SDLwindow, SDLRenderer and a pointer to each set to null
     SDL_Window* window = nullptr;
@@ -100,6 +109,7 @@ int main() {
 
             uint32_t black = 0xFF000000;
             uint32_t white = 0xFFFFFFFF;
+            uint32_t gray = 0xFF969696;
             // reset vector at beginning of every loop so there's no lingering line data
             std::fill(pixels.begin(), pixels.end(), white);
             std::fill(z_buffer.begin(), z_buffer.end(), std::numeric_limits<float>::max());
@@ -111,7 +121,7 @@ int main() {
             Shape transformed_box = project_shape(rotate_shape(test_box, theta, theta, theta), 750);
 
             draw_shape(transformed_box, black, pixels);
-            fill_shape(transformed_box, black, pixels, z_buffer);
+            fill_shape(transformed_box, gray, pixels, z_buffer, light_direction);
 
             // fill_shape(test_triangle, white, pixels);
             // clear the renderer in anticipation of filling it with the updated texture

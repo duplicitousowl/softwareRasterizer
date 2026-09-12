@@ -17,4 +17,6 @@ bool depth_test (int x, int y, float depth, std::vector<float>& z_buffer);
 
 void draw_triangle(Point p1, Point p2, Point p3, float z1, float z2, float z3, uint32_t color, std::vector<uint32_t>& pixels, std::vector<float>& z_buffer);
 
-void fill_shape(Shape shape, uint32_t color, std::vector<uint32_t>& pixels, std::vector<float>& z_buffer);
+void fill_shape(Shape shape, uint32_t color, std::vector<uint32_t>& pixels, std::vector<float>& z_buffer, Vertex light_direction);
+
+Vertex normalize (Vertex v0);
