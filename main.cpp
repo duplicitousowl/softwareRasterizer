@@ -105,6 +105,19 @@ int main() {
                 // if user x's out, ends loop
                 isRunning = false; 
             }
+
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                dragging = true;
+}
+            else if (event.type == SDL_MOUSEBUTTONUP) {
+                dragging = false;
+}
+            else if (event.type == SDL_MOUSEMOTION) {
+                if (dragging) {
+                    camera_yaw -= event.motion.xrel * 0.005f;
+                    camera_pitch -= event.motion.yrel * 0.005f;
+    }
+}
         }   
 
             uint32_t black = 0xFF000000;
@@ -118,7 +131,7 @@ int main() {
 
             theta -= 0.0015f;
             
-            Shape transformed_box = project_shape(rotate_shape(test_box, theta, theta, theta), 750);
+            Shape transformed_box = project_shape(rotate_shape(test_box, camera_pitch, camera_yaw, 0.0f), 750);
 
             draw_shape(transformed_box, black, pixels);
             fill_shape(transformed_box, gray, pixels, z_buffer, light_direction);
